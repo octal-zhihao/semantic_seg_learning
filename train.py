@@ -4,14 +4,17 @@ from model_module import SegmentationModel
 from data_module import VOCDataModule
 import pytorch_lightning as pl
 from config import MAX_EPOCHS
-from pytorch_lightning.loggers import WandBLogger
+from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 import wandb
 def main():
     model = SegmentationModel()
     data_module = VOCDataModule()
-    wandb.init(project='segmentation_model', entity='octal-zhihao')
-    wandb_logger = WandBLogger(project='segmentation_model', log_model=True)
+    wandb_logger = WandbLogger(
+        project="voc_segmentation",      # 项目名，自行修改
+        name="fcn_resnet50_run",         # 实验名，可选
+        log_model=True                   # 自动保存模型到 WandB
+    )
     checkpoint_callback = ModelCheckpoint(
         monitor='val_mIoU',
         dirpath='mycheckpoints/',
