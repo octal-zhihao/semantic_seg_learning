@@ -176,3 +176,5 @@ cython_debug/
 lightning_logs/
 
 data/
+mycheckpoints/
+wandb/
