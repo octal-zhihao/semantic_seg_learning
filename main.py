@@ -33,10 +33,10 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
 
     # 调度器参数
-    parser.add_argument("--T_max", type=int, default=30, help="Max number of epochs for cosine annealing")
-    parser.add_argument("--eta_min", type=float, default=5e-5, help="Minimum learning rate for cosine annealing")
+    parser.add_argument("--T_max", type=int, default=100, help="Max number of epochs for cosine annealing")
+    parser.add_argument("--eta_min", type=float, default=1e-6, help="Minimum learning rate for cosine annealing")
     # 训练参数
-    parser.add_argument("--max_epochs", type=int, default=300, help="Number of total epochs")
+    parser.add_argument("--max_epochs", type=int, default=100, help="Number of total epochs")
     parser.add_argument("--precision", type=int, default=32, help="Floating point precision (16 or 32)")
     parser.add_argument("--accelerator", type=str, default="gpu", help="Trainer accelerator: cpu/gpu/mps")
     parser.add_argument("--devices", type=int, default=1, help="Number of devices to use")
