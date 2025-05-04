@@ -38,7 +38,9 @@ class MInterface(pl.LightningModule):
         self.train_iou = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255, average="macro")
         self.val_iou   = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255, average="macro")
         self.test_iou  = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255, average="macro")
-
+        # per-class IoU: average=None
+        self.test_iou_per_class = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255, average=None)
+        
     def forward(self, x):
         out = self.model(x)
         return out['out'] if isinstance(out, dict) else out
@@ -55,8 +57,10 @@ class MInterface(pl.LightningModule):
             self.val_iou(preds, masks)
             self.log("val_mIoU", self.val_iou, on_epoch=True, prog_bar=True)
         else:
+            # overall
             self.test_iou(preds, masks)
-            self.log("test_mIoU", self.test_iou, on_epoch=True)
+            # per-class
+            self.test_iou_per_class(preds, masks)
         self.log(f"{stage}_loss", loss, on_epoch=True, prog_bar=(stage=="val"))
         return loss
 
@@ -74,8 +78,17 @@ class MInterface(pl.LightningModule):
         optimizer = self.trainer.optimizers[0]
         lr = optimizer.param_groups[0]['lr']
         self.log('lr', lr, prog_bar=True, logger=True)
+    def test_epoch_end(self, outputs):
+        # log overall test mIoU
+        self.log('test_mIoU', self.test_iou.compute(), prog_bar=True)
+        # log per-class IoU
+        per_cls = self.test_iou_per_class.compute().cpu().tolist()
+        for idx, iou_val in enumerate(per_cls):
+            self.log(f"iou_cls_{idx}", iou_val)
+        # reset per-class metric for future runs
+        self.test_iou_per_class.reset()
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-6)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=self.hparams.T_max, eta_min=self.hparams.eta_min)
         return [optimizer], [scheduler]

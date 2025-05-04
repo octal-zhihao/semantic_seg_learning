@@ -32,6 +32,9 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
 
+    # 调度器参数
+    parser.add_argument("--T_max", type=int, default=30, help="Max number of epochs for cosine annealing")
+    parser.add_argument("--eta_min", type=float, default=5e-5, help="Minimum learning rate for cosine annealing")
     # 训练参数
     parser.add_argument("--max_epochs", type=int, default=300, help="Number of total epochs")
     parser.add_argument("--precision", type=int, default=32, help="Floating point precision (16 or 32)")
@@ -45,7 +48,7 @@ def parse_args():
 
     return parser.parse_args()
 
-def main():
+def train():
     args = vars(parse_args())
     # 1. Data
     data_module = DInterface(**args)
@@ -59,7 +62,7 @@ def main():
         dirpath='mycheckpoints/',
         mode="max",
         save_top_k=args["save_top_k"],
-        filename="deeplabv3-{epoch:02d}-{val_iou:.3f}"
+        filename="{arg['backbone']}_{epoch:02d}_{val_mIoU:.2f}"
     )
     earlystop_cb = EarlyStopping(
         monitor="val_mIoU",
@@ -82,5 +85,21 @@ def main():
     trainer.fit(model, data_module)
     # trainer.test(model, data_module)
 
+def test():
+    args = vars(parse_args())
+    # 1. Data
+    data_module = DInterface(**args)
+    # 2. Model
+    best_ckpt = "mycheckpoints/xxx.ckpt"
+    model = MInterface.load_from_checkpoint(best_ckpt, **args)
+    # 3. 创建 trainer（不需要再训练所以不用 callbacks）
+    trainer = pl.Trainer(accelerator="auto", devices="auto")
+    # 4. 测试
+    trainer.test(model, data_module)
+
+def predict():
+    pass
 if __name__ == "__main__":
-    main()
+    train()
+    # test()
+    # predict()
