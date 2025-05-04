@@ -73,7 +73,7 @@ def main():
 
     # 5. Train & Test
     trainer.fit(model, data_module)
-    trainer.test(model, data_module)
+    # trainer.test(model, data_module)
 
 if __name__ == "__main__":
     main()

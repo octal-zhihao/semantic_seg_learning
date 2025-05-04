@@ -46,20 +46,27 @@ class DInterface(pl.LightningDataModule):
 
     def setup(self, stage: Optional[str] = None):
         # 整个训练集（train + val split）
-        full = VOCSegmentation(
+        # full = VOCSegmentation(
+        #     self.data_dir,
+        #     year="2012",
+        #     image_set="train",
+        #     transform=self.train_image_transform,
+        #     target_transform=self.train_mask_transform,
+        # )
+        # 划分训练/验证集
+        # n_val = int(len(full) * self.val_split)
+        # n_train = len(full) - n_val
+        # self.train_dataset, self.val_dataset = random_split(full, [n_train, n_val])
+
+        self.train_dataset = VOCSegmentation(
             self.data_dir,
             year="2012",
             image_set="train",
             transform=self.train_image_transform,
             target_transform=self.train_mask_transform,
         )
-        # 划分训练/验证集
-        n_val = int(len(full) * self.val_split)
-        n_train = len(full) - n_val
-        self.train_dataset, self.val_dataset = random_split(full, [n_train, n_val])
-
-        # 测试集使用官方 val split
-        self.test_dataset = VOCSegmentation(
+        
+        self.val_dataset = VOCSegmentation(
             self.data_dir,
             year="2012",
             image_set="val",
