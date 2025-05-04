@@ -10,7 +10,7 @@ def parse_args():
 
     # 数据参数
     parser.add_argument("--data_dir", type=str, default="./data", help="Path to dataset root")
-    parser.add_argument("--batch_size", type=int, default=8, help="Batch size")
+    parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
     parser.add_argument("--num_workers", type=int, default=4, help="Number of dataloader workers")
     parser.add_argument("--img_size", type=int, default=224, help="Resize image to this size")
     parser.add_argument("--augment", type=str, default="light", choices=["light", "strong", "default"], help="Data augmentation type")
@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument(
         "--backbone",
         type=str,
-        default="deeplabv3_resnet101",
+        default="unet_efficientnetb0",
         choices=["deeplabv3_resnet50", "deeplabv3_resnet101", "fcn_resnet50", "fcn_resnet101", 
                  "unet_resnet50", "unet_resnet101", "unet_mobilenetv2", "unet_efficientnetb0", "unet_efficientnetb3"],
         help="Model backbone/type",
@@ -37,7 +37,7 @@ def parse_args():
     parser.add_argument("--precision", type=int, default=32, help="Floating point precision (16 or 32)")
     parser.add_argument("--accelerator", type=str, default="gpu", help="Trainer accelerator: cpu/gpu/mps")
     parser.add_argument("--devices", type=int, default=1, help="Number of devices to use")
-
+    parser.add_argument("--val_split", type=float, default=0.2, help="Validation split ratio")
     # 日志与回调
     parser.add_argument("--project", type=str, default="semantic-seg", help="WandB project name")
     parser.add_argument("--early_stop_patience", type=int, default=10, help="EarlyStopping patience")

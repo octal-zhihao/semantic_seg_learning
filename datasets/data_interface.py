@@ -1,9 +1,8 @@
-import os
 import random
 from typing import Optional
 
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split, Dataset
 import pytorch_lightning as pl
 from torchvision.datasets import VOCSegmentation
 from torchvision import transforms
@@ -24,14 +23,16 @@ class DInterface(pl.LightningDataModule):
         self.batch_size  = kwargs['batch_size']
         self.num_workers = kwargs['num_workers']
         self.image_size  = kwargs['img_size']
+        self.val_split   = kwargs['val_split']
+        self.augment     = kwargs['augment']
 
-        # 验证集：只做 Resize + ToTensor + Normalize
-        self.val_image_transform = transforms.Compose([
+        # 只在 default 下用到
+        self.val_img_tf = transforms.Compose([
             transforms.Resize((self.image_size, self.image_size), interpolation=InterpolationMode.BILINEAR),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225]),
         ])
-        self.val_mask_transform = transforms.Compose([
+        self.val_msk_tf = transforms.Compose([
             transforms.Resize((self.image_size, self.image_size), interpolation=InterpolationMode.NEAREST),
             mask_to_tensor,
         ])
@@ -41,49 +42,67 @@ class DInterface(pl.LightningDataModule):
         VOCSegmentation(self.data_dir, year="2012", image_set="val", download=False)
 
     def setup(self, stage: Optional[str] = None):
-        base_train = VOCSegmentation(
-            self.data_dir, year="2012", image_set="train", download=False)
+        # 合并 trainval 然后再自己 split
+        full = VOCSegmentation(self.data_dir, year="2012", image_set="trainval", download=False)
+        n_val   = int(len(full) * self.val_split)
+        n_train = len(full) - n_val
+        train_base, val_base = random_split(full, [n_train, n_val])
 
-        base_val = VOCSegmentation(
-            self.data_dir, year="2012", image_set="val", download=False)
-
-        # 定义一个 joint transform：先 Resize，再随机水平/垂直翻转，最后张量化
-        def train_joint_transform(img, mask):
-            # 1) Resize
+        def joint_transform(img, mask):
+            # 1. Resize
             img  = TF.resize(img,  (self.image_size, self.image_size), InterpolationMode.BILINEAR)
             mask = TF.resize(mask, (self.image_size, self.image_size), InterpolationMode.NEAREST)
-            # 2) Random flips
-            if random.random() < 0.5:
-                img  = TF.hflip(img);  mask = TF.hflip(mask)
-            if random.random() < 0.5:
-                img  = TF.vflip(img);  mask = TF.vflip(mask)
-            # 3) ToTensor & Normalize / ToTensor mask
+
+            # 2. Light 几何增强：随机翻转
+            if self.augment in ("light", "strong"):
+                if random.random() < 0.5:
+                    img, mask = TF.hflip(img), TF.hflip(mask)
+                if random.random() < 0.5:
+                    img, mask = TF.vflip(img), TF.vflip(mask)
+
+            # 3. Strong 额外增强：随机旋转 + 色彩抖动 + 随机裁剪
+            if self.augment == "strong":
+                # 随机旋转
+                angle = random.uniform(-30, 30)
+                img, mask = TF.rotate(img, angle, interpolation=InterpolationMode.BILINEAR), \
+                            TF.rotate(mask, angle, interpolation=InterpolationMode.NEAREST)
+                # 随机裁剪（再恢复至目标尺寸）
+                i, j, h, w = transforms.RandomResizedCrop.get_params(
+                    img, scale=(0.7, 1.0), ratio=(3/4, 4/3)
+                )
+                img = TF.resized_crop(img, i, j, h, w, (self.image_size, self.image_size), interpolation=InterpolationMode.BILINEAR)
+                mask= TF.resized_crop(mask,i, j, h, w, (self.image_size, self.image_size), interpolation=InterpolationMode.NEAREST)
+                # 色彩抖动
+                color_jitter = transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1)
+                img = color_jitter(img)
+
+            # 4. ToTensor + Normalize / ToTensor mask
             img  = TF.to_tensor(img)
             img  = TF.normalize(img, mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
             mask = mask_to_tensor(mask)
             return img, mask
 
-        # Wrapper dataset，用于同时对 img 和 mask 做增强
-        class VOCWrapper(torch.utils.data.Dataset):
-            def __init__(self, base_ds, joint_transform, val_transform=None):
+        # wrapper
+        class VOCWrapper(Dataset):
+            def __init__(self, base_ds, tf_fn):
                 self.base_ds = base_ds
-                self.joint_transform = joint_transform
-                self.val_transform = val_transform
+                self.tf_fn   = tf_fn
             def __len__(self):
                 return len(self.base_ds)
             def __getitem__(self, idx):
                 img, mask = self.base_ds[idx]
-                if self.val_transform is None:
-                    return self.joint_transform(img, mask)
-                else:
-                    # 验证时只做 val_transform
-                    img  = self.val_transform[0](img)  # list of two: img_transform, mask_transform
-                    mask = self.val_transform[1](mask)
+                # default 模式退化成只做验证 transformations
+                if self.tf_fn is None:
+                    img = self.val_img_tf(img)
+                    mask = self.val_msk_tf(mask)
                     return img, mask
+                return self.tf_fn(img, mask)
 
-        # 组装 train/val datasets
-        self.train_dataset = VOCWrapper(base_train, train_joint_transform)
-        self.val_dataset   = VOCWrapper(base_val, None, val_transform=(self.val_image_transform, self.val_mask_transform))
+        train_tf = joint_transform if self.augment != "default" else None
+        val_tf   = None  # always use default resize+tensor on val
+
+        self.train_dataset = VOCWrapper(train_base, train_tf)
+        self.val_dataset   = VOCWrapper(val_base,   val_tf)
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True,
