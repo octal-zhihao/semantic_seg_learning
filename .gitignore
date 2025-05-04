@@ -178,3 +178,4 @@ lightning_logs/
 data/
 mycheckpoints/
 wandb/
+comp5_test_cls/

@@ -78,7 +78,7 @@ class MInterface(pl.LightningModule):
         optimizer = self.trainer.optimizers[0]
         lr = optimizer.param_groups[0]['lr']
         self.log('lr', lr, prog_bar=True, logger=True)
-    def test_epoch_end(self, outputs):
+    def on_test_epoch_end(self):
         # log overall test mIoU
         self.log('test_mIoU', self.test_iou.compute(), prog_bar=True)
         # log per-class IoU

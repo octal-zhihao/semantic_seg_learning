@@ -62,7 +62,7 @@ def train():
         dirpath='mycheckpoints/',
         mode="max",
         save_top_k=args["save_top_k"],
-        filename="{arg['backbone']}_{epoch:02d}_{val_mIoU:.2f}"
+        filename=f"{args['backbone']}" + "_{{epoch:02d}}_{{val_mIoU:.2f}}"
     )
     earlystop_cb = EarlyStopping(
         monitor="val_mIoU",
