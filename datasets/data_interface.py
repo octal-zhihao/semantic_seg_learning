@@ -84,9 +84,11 @@ class DInterface(pl.LightningDataModule):
 
         # wrapper
         class VOCWrapper(Dataset):
-            def __init__(self, base_ds, tf_fn):
+            def __init__(self, base_ds, tf_fn, val_img_tf, val_msk_tf):
                 self.base_ds = base_ds
                 self.tf_fn   = tf_fn
+                self.val_img_tf = val_img_tf
+                self.val_msk_tf = val_msk_tf
             def __len__(self):
                 return len(self.base_ds)
             def __getitem__(self, idx):
@@ -101,8 +103,8 @@ class DInterface(pl.LightningDataModule):
         train_tf = joint_transform if self.augment != "default" else None
         val_tf   = None  # always use default resize+tensor on val
 
-        self.train_dataset = VOCWrapper(train_base, train_tf)
-        self.val_dataset   = VOCWrapper(val_base,   val_tf)
+        self.train_dataset = VOCWrapper(train_base, train_tf, self.val_img_tf, self.val_msk_tf)
+        self.val_dataset   = VOCWrapper(val_base,   val_tf, self.val_img_tf, self.val_msk_tf)
 
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True,
