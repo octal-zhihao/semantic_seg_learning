@@ -18,7 +18,14 @@ def parse_args():
     # parser.add_argument("--use_cutmix", action="store_true", help="Enable cutmix augmentation")
 
     # 模型参数
-    parser.add_argument("--backbone", type=str, default="deeplabv3_resnet50", help="Model backbone")
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default="unet_mobilenetv2",
+        choices=["deeplabv3_resnet50", "deeplabv3_resnet101", "fcn_resnet50", "fcn_resnet101", 
+                 "unet_resnet50", "unet_resnet101", "unet_mobilenetv2", "unet_efficientnetb0", "unet_efficientnetb3"],
+        help="Model backbone/type",
+    )
     parser.add_argument("--num_classes", type=int, default=21, help="Number of classes")
 
     # 优化器参数

@@ -3,13 +3,12 @@ import pytorch_lightning as pl
 from torchvision import models
 import torch.nn.functional as F
 from torchmetrics import JaccardIndex
-
+import segmentation_models_pytorch as smp
 class MInterface(pl.LightningModule):
     def __init__(self, **kwargs):
         super().__init__()
         self.save_hyperparameters()
         num_classes = self.hparams.num_classes
-        # 使用 torchvision 提供的 DeepLabV3 + ResNet50 backbone
         if self.hparams.backbone == "deeplabv3_resnet50":
             self.model = models.segmentation.deeplabv3_resnet50(pretrained=True, progress=True)
             self.model.classifier[4] = torch.nn.Conv2d(256, num_classes, kernel_size=1)
@@ -22,6 +21,16 @@ class MInterface(pl.LightningModule):
         elif self.hparams.backbone == "fcn_resnet101":
             self.model = models.segmentation.fcn_resnet101(pretrained=True, progress=True)
             self.model.classifier[4] = torch.nn.Conv2d(512, num_classes, kernel_size=1)
+        elif self.hparams.backbone == "unet_resnet50":
+            self.model = smp.Unet(encoder_name="resnet50", encoder_weights="imagenet", classes=num_classes, activation=None)
+        elif self.hparams.backbone == "unet_resnet101":
+            self.model = smp.Unet(encoder_name="resnet101", encoder_weights="imagenet", classes=num_classes, activation=None)
+        elif self.hparams.backbone == "unet_mobilenetv2":
+            self.model = smp.Unet(encoder_name="mobilenet_v2", encoder_weights="imagenet", classes=num_classes, activation=None)
+        elif self.hparams.backbone == "unet_efficientnetb0":
+            self.model = smp.Unet(encoder_name="efficientnet-b0", encoder_weights="imagenet", classes=num_classes, activation=None)
+        elif self.hparams.backbone == "unet_efficientnetb3":
+            self.model = smp.Unet(encoder_name="efficientnet-b3", encoder_weights="imagenet", classes=num_classes, activation=None)
         else:
             raise ValueError(f"Unsupported backbone: {self.hparams.backbone}")
         # 监控 IoU
@@ -30,7 +39,11 @@ class MInterface(pl.LightningModule):
         self.test_iou = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255)
 
     def forward(self, x):
-        return self.model(x)['out']
+        out = self.model(x)
+        # smp Unet returns masks, torchvision returns dict
+        if isinstance(out, dict):
+            return out['out']
+        return out
 
     def shared_step(self, batch, stage: str):
         imgs, masks = batch
