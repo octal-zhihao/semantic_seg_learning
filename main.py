@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
 
     # 训练参数
-    parser.add_argument("--max_epochs", type=int, default=50, help="Number of total epochs")
+    parser.add_argument("--max_epochs", type=int, default=300, help="Number of total epochs")
     parser.add_argument("--precision", type=int, default=32, help="Floating point precision (16 or 32)")
     parser.add_argument("--accelerator", type=str, default="gpu", help="Trainer accelerator: cpu/gpu/mps")
     parser.add_argument("--devices", type=int, default=1, help="Number of devices to use")
@@ -34,7 +34,7 @@ def parse_args():
     # 日志与回调
     parser.add_argument("--project", type=str, default="semantic-seg", help="WandB project name")
     parser.add_argument("--early_stop_patience", type=int, default=10, help="EarlyStopping patience")
-    parser.add_argument("--save_top_k", type=int, default=1, help="Number of top checkpoints to save")
+    parser.add_argument("--save_top_k", type=int, default=3, help="Number of top checkpoints to save")
 
     return parser.parse_args()
 
@@ -51,19 +51,20 @@ def main():
         monitor="val_mIoU",
         dirpath='mycheckpoints/',
         mode="max",
-        save_top_k=3,
+        save_top_k=args["save_top_k"],
         filename="deeplabv3-{epoch:02d}-{val_iou:.3f}"
     )
     earlystop_cb = EarlyStopping(
         monitor="val_mIoU",
         mode="max",
-        patience=5,
+        patience=args["early_stop_patience"],
         verbose=True
     )
 
     # 4. Trainer
     trainer = pl.Trainer(
-        max_epochs=50,
+        max_epochs=args["max_epochs"],
+        precision=args["precision"],
         logger=wandb_logger,
         callbacks=[checkpoint_cb],
         accelerator="auto",
