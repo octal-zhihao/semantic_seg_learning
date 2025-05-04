@@ -83,23 +83,14 @@ def train():
 
     # 5. Train & Test
     trainer.fit(model, data_module)
-    # trainer.test(model, data_module)
+    print("训练完成，自动评估测试集...")
+    model_path = checkpoint_cb.best_model_path
+    if model_path:
+        best_model = MInterface.load_from_checkpoint(model_path)
+        trainer.test(best_model, datamodule=data_module)
+    else:
+        print("未保存最佳模型，使用当前模型测试...")
+        trainer.test(model, datamodule=data_module)
 
-def test():
-    args = vars(parse_args())
-    # 1. Data
-    data_module = DInterface(**args)
-    # 2. Model
-    best_ckpt = "mycheckpoints/xxx.ckpt"
-    model = MInterface.load_from_checkpoint(best_ckpt, **args)
-    # 3. 创建 trainer（不需要再训练所以不用 callbacks）
-    trainer = pl.Trainer(accelerator="auto", devices="auto")
-    # 4. 测试
-    trainer.test(model, data_module)
-
-def predict():
-    pass
 if __name__ == "__main__":
     train()
-    # test()
-    # predict()
