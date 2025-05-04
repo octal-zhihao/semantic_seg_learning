@@ -34,9 +34,9 @@ class MInterface(pl.LightningModule):
         else:
             raise ValueError(f"Unsupported backbone: {self.hparams.backbone}")
         # 监控 IoU
-        self.train_iou = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255)
-        self.val_iou = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255)
-        self.test_iou = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255)
+        self.train_iou = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255, average="macro")
+        self.val_iou = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255, average="macro")
+        self.test_iou = JaccardIndex(task="multiclass", num_classes=num_classes, ignore_index=255, average="macro")
 
     def forward(self, x):
         out = self.model(x)
@@ -73,5 +73,5 @@ class MInterface(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
         return [optimizer], [scheduler]

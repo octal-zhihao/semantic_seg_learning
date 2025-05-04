@@ -21,7 +21,7 @@ def parse_args():
     parser.add_argument(
         "--backbone",
         type=str,
-        default="unet_mobilenetv2",
+        default="deeplabv3_resnet101",
         choices=["deeplabv3_resnet50", "deeplabv3_resnet101", "fcn_resnet50", "fcn_resnet101", 
                  "unet_resnet50", "unet_resnet101", "unet_mobilenetv2", "unet_efficientnetb0", "unet_efficientnetb3"],
         help="Model backbone/type",
