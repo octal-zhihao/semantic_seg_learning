@@ -21,9 +21,10 @@ def parse_args():
     parser.add_argument(
         "--backbone",
         type=str,
-        default="unet_efficientnet-b0",
-        choices=["deeplabv3_resnet50", "deeplabv3_resnet101", "fcn_resnet50", "fcn_resnet101", 
-                 "unet_resnet50", "unet_resnet101", "unet_mobilenet_v2", "unet_efficientnet-b0", "unet_efficientnet-b3"],
+        default="lraspp",
+        choices=["deeplabv3_resnet50", "deeplabv3_resnet101", "fcn_resnet50", "fcn_resnet101", "lraspp",
+                 "unet_resnet50", "unet_resnet101", "unet_mobilenet_v3", "unet_efficientnet-b0", "unet_efficientnet-b3",
+                 "Segformer", "DeepLabV3Plus", "UnetPlusPlus"],
         help="Model backbone/type",
     )
     parser.add_argument("--num_classes", type=int, default=21, help="Number of classes")
@@ -83,14 +84,14 @@ def train():
 
     # 5. Train & Test
     trainer.fit(model, data_module)
-    print("训练完成，自动评估测试集...")
-    model_path = checkpoint_cb.best_model_path
-    if model_path:
-        best_model = MInterface.load_from_checkpoint(model_path)
-        trainer.test(best_model, datamodule=data_module)
-    else:
-        print("未保存最佳模型，使用当前模型测试...")
-        trainer.test(model, datamodule=data_module)
+    # print("训练完成，自动评估测试集...")
+    # model_path = checkpoint_cb.best_model_path
+    # if model_path:
+    #     best_model = MInterface.load_from_checkpoint(model_path)
+    #     trainer.test(best_model, datamodule=data_module)
+    # else:
+    #     print("未保存最佳模型，使用当前模型测试...")
+    #     trainer.test(model, datamodule=data_module)
 
 if __name__ == "__main__":
     train()

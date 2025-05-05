@@ -23,10 +23,33 @@ class MInterface(pl.LightningModule):
         elif self.hparams.backbone == "fcn_resnet101":
             self.model = models.segmentation.fcn_resnet101(pretrained=False, progress=True)
             self.model.classifier[4] = torch.nn.Conv2d(512, num_classes, kernel_size=1)
+        elif self.hparams.backbone == "lraspp":
+            self.model = models.segmentation.lraspp_mobilenet_v3_large(pretrained=False, progress=True, num_classes=num_classes)
         elif self.hparams.backbone.startswith("unet_"):
             encoder = self.hparams.backbone.split("unet_")[-1]
             self.model = smp.Unet(
                 encoder_name=encoder,
+                encoder_weights="imagenet",
+                classes=num_classes,
+                activation=None
+            )
+        elif self.hparams.backbone == "Segformer":
+            self.model = smp.Segformer(
+                encoder_name="resnet50",
+                encoder_weights="imagenet",
+                classes=num_classes,
+                activation=None
+            )
+        elif self.hparams.backbone == "DeepLabV3Plus":
+            self.model = smp.DeepLabV3Plus(
+                encoder_name="resnet50",
+                encoder_weights="imagenet",
+                classes=num_classes,
+                activation=None
+            )
+        elif self.hparams.backbone == "UnetPlusPlus":
+            self.model = smp.UnetPlusPlus(
+                encoder_name="resnet50",
                 encoder_weights="imagenet",
                 classes=num_classes,
                 activation=None
@@ -78,6 +101,7 @@ class MInterface(pl.LightningModule):
         optimizer = self.trainer.optimizers[0]
         lr = optimizer.param_groups[0]['lr']
         self.log('lr', lr, prog_bar=True, logger=True)
+
     def on_test_epoch_end(self):
         # log overall test mIoU
         self.log('test_mIoU', self.test_iou.compute(), prog_bar=True)
@@ -86,6 +110,30 @@ class MInterface(pl.LightningModule):
         for idx, iou_val in enumerate(per_cls):
             self.log(f"iou_cls_{idx}", iou_val)
         # reset per-class metric for future runs
+        self.test_iou_per_class.reset()
+
+    def on_train_epoch_end(self):
+        # 全量计算 train mIoU 并 log
+        train_miou = self.train_iou.compute()
+        self.log("train_mIoU", train_miou, prog_bar=True)
+        self.train_iou.reset()
+        # 记录 LR
+        opt = self.trainer.optimizers[0]
+        lr = opt.param_groups[0]["lr"]
+        self.log("lr", lr, prog_bar=True, logger=True)
+
+    def on_validation_epoch_end(self):
+        val_miou = self.val_iou.compute()
+        self.log("val_mIoU", val_miou, prog_bar=True)
+        self.val_iou.reset()
+
+    def on_test_epoch_end(self):
+        test_miou = self.test_iou.compute()
+        self.log("test_mIoU", test_miou, prog_bar=True)
+        per_cls = self.test_iou_per_class.compute().cpu().tolist()
+        for idx, v in enumerate(per_cls):
+            self.log(f"iou_cls_{idx}", v)
+        self.test_iou.reset()
         self.test_iou_per_class.reset()
 
     def configure_optimizers(self):
