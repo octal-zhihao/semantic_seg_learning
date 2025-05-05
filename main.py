@@ -11,9 +11,9 @@ def parse_args():
     # 数据参数
     parser.add_argument("--data_dir", type=str, default="./data", help="Path to dataset root")
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
-    parser.add_argument("--num_workers", type=int, default=4, help="Number of dataloader workers")
+    parser.add_argument("--num_workers", type=int, default=8, help="Number of dataloader workers")
     parser.add_argument("--img_size", type=int, default=224, help="Resize image to this size")
-    parser.add_argument("--augment", type=str, default="light", choices=["light", "strong", "default"], help="Data augmentation type")
+    parser.add_argument("--augment", type=str, default="default", choices=["light", "strong", "default"], help="Data augmentation type")
     # parser.add_argument("--use_mixup", action="store_true", help="Enable mixup augmentation")
     # parser.add_argument("--use_cutmix", action="store_true", help="Enable cutmix augmentation")
 
@@ -21,9 +21,9 @@ def parse_args():
     parser.add_argument(
         "--backbone",
         type=str,
-        default="lraspp",
+        default="unet_efficientnet-b0",
         choices=["deeplabv3_resnet50", "deeplabv3_resnet101", "fcn_resnet50", "fcn_resnet101", "lraspp",
-                 "unet_resnet50", "unet_resnet101", "unet_mobilenet_v3", "unet_efficientnet-b0", "unet_efficientnet-b3",
+                 "unet_resnet50", "unet_resnet101", "unet_mobilenet_v2", "unet_efficientnet-b0", "unet_efficientnet-b3",
                  "Segformer", "DeepLabV3Plus", "UnetPlusPlus"],
         help="Model backbone/type",
     )

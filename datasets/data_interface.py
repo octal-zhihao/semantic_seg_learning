@@ -115,4 +115,5 @@ class DInterface(pl.LightningDataModule):
                           num_workers=self.num_workers, pin_memory=True)
 
     def test_dataloader(self):
-        return self.val_dataloader()
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False,
+                          num_workers=self.num_workers, pin_memory=True)
