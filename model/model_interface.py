@@ -81,9 +81,9 @@ class MInterface(pl.LightningModule):
             self.log("val_mIoU", self.val_iou, on_epoch=True, prog_bar=True)
         else:
             # overall
-            self.test_iou(preds, masks)
+            self.test_iou.update(preds, masks)
             # per-class
-            self.test_iou_per_class(preds, masks)
+            self.test_iou_per_class.update(preds, masks)
         self.log(f"{stage}_loss", loss, on_epoch=True, prog_bar=(stage=="val"))
         return loss
 
@@ -112,29 +112,6 @@ class MInterface(pl.LightningModule):
         # reset per-class metric for future runs
         self.test_iou_per_class.reset()
 
-    def on_train_epoch_end(self):
-        # 全量计算 train mIoU 并 log
-        train_miou = self.train_iou.compute()
-        self.log("train_mIoU", train_miou, prog_bar=True)
-        self.train_iou.reset()
-        # 记录 LR
-        opt = self.trainer.optimizers[0]
-        lr = opt.param_groups[0]["lr"]
-        self.log("lr", lr, prog_bar=True, logger=True)
-
-    def on_validation_epoch_end(self):
-        val_miou = self.val_iou.compute()
-        self.log("val_mIoU", val_miou, prog_bar=True)
-        self.val_iou.reset()
-
-    def on_test_epoch_end(self):
-        test_miou = self.test_iou.compute()
-        self.log("test_mIoU", test_miou, prog_bar=True)
-        per_cls = self.test_iou_per_class.compute().cpu().tolist()
-        for idx, v in enumerate(per_cls):
-            self.log(f"iou_cls_{idx}", v)
-        self.test_iou.reset()
-        self.test_iou_per_class.reset()
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.weight_decay)
